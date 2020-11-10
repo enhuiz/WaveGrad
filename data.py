@@ -109,7 +109,7 @@ class MelSpectrogramFixed(torch.nn.Module):
 
     def forward(self, audio, remove_last=True):
         x_stft = self.spectrogram(audio)
-        spc = torch.abs(x_stft)  # (b, #frames, #bins)
+        spc = torch.abs(x_stft)  # (b, #bins, #frames)
         mel = torch.log10((self.mel_basis @ spc).clamp_min(self.eps))
         if remove_last:
             mel = mel[..., :-1]
