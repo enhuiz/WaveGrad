@@ -56,6 +56,16 @@ if __name__ == "__main__":
     # Initialize the model
     model = WaveGrad(config)
 
+    # Set default noise scheduler for model loading
+    model.set_new_noise_schedule(
+        init_kwargs={
+            "steps": config.training_config.test_noise_schedule.n_iter,
+            "start": config.training_config.test_noise_schedule.betas_range[0],
+            "end": config.training_config.test_noise_schedule.betas_range[1],
+        }
+    )
+
+    # Load model
     ckpt = torch.load(args.checkpoint_path)["model"]
     model.load_state_dict(ckpt)
 
