@@ -56,6 +56,9 @@ if __name__ == "__main__":
     # Initialize the model
     model = WaveGrad(config)
 
+    ckpt = torch.load(args.checkpoint_path)["model"]
+    model.load_state_dict(ckpt)
+
     # Set noise schedule
     noise_schedule = torch.load(args.noise_schedule_path)
     noise_schedule = torch.tensor(noise_schedule)
@@ -66,9 +69,6 @@ if __name__ == "__main__":
 
     # Trying to run inference on GPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    ckpt = torch.load(args.checkpoint_path)["model"]
-
-    model.load_state_dict(ckpt, strict=False)
     model = model.to(device)
 
     # Inference
