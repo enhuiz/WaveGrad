@@ -100,7 +100,7 @@ class WaveGrad(BaseModule):
                 if isinstance(eps, type(None)) else continuous_sqrt_alpha_cumprod
         if isinstance(eps, type(None)):
             eps = torch.randn_like(y_0)
-        outputs = continuous_sqrt_alpha_cumprod * y_0 + (1 - continuous_sqrt_alpha_cumprod**2) * eps
+        outputs = continuous_sqrt_alpha_cumprod * y_0 + (1 - continuous_sqrt_alpha_cumprod**2).sqrt() * eps
         return outputs
 
     def q_posterior(self, y_start, y, t):
