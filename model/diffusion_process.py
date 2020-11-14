@@ -113,7 +113,7 @@ class WaveGrad(BaseModule):
 
     def p_mean_variance(self, mels, y, t, clip_denoised: bool):
         batch_size = mels.shape[0]
-        noise_level = torch.FloatTensor([self.sqrt_alphas_cumprod_prev[t]]).repeat(batch_size, 1).to(mels)
+        noise_level = torch.FloatTensor([self.sqrt_alphas_cumprod_prev[t+1]]).repeat(batch_size, 1).to(mels)
         eps_recon = self.nn(mels, y, noise_level)
         y_recon = self.predict_start_from_noise(y, t, eps_recon)
 
