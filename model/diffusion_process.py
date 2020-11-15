@@ -18,6 +18,8 @@ class WaveGrad(BaseModule):
         super(WaveGrad, self).__init__()
         # Setup noise schedule
         self.noise_schedule_is_set = False
+        self.continuous_noise_level = getattr(config.training_config, 
+                'continuous_noise_level', True)
 
         # Backbone neural network to model noise
         self.total_factor = np.product(config.model_config.factors)
@@ -78,29 +80,33 @@ class WaveGrad(BaseModule):
         self.noise_schedule_kwargs = {'init': init, 'init_kwargs': init_kwargs}
         self.noise_schedule_is_set = True
 
-    def sample_continuous_noise_level(self, batch_size, device):
+    def sample_noise_level(self, batch_size, device):
         """
-        Samples continuous noise level sqrt(alpha_cumprod).
+        Samples noise level sqrt(alpha_cumprod).
         This is what makes WaveGrad different from other Denoising Diffusion Probabilistic Models.
         """
         s = np.random.choice(range(1, self.n_iter + 1), size=batch_size)
-        continuous_sqrt_alpha_cumprod = torch.FloatTensor(
-            np.random.uniform(
-                self.sqrt_alphas_cumprod_prev[s-1],
-                self.sqrt_alphas_cumprod_prev[s],
-                size=batch_size
+        if self.continuous_noise_level:
+            noise_level = torch.FloatTensor(
+                np.random.uniform(
+                    self.sqrt_alphas_cumprod_prev[s-1],
+                    self.sqrt_alphas_cumprod_prev[s],
+                    size=batch_size
+                )
             )
-        ).to(device)
-        return continuous_sqrt_alpha_cumprod.unsqueeze(-1)
+        else:
+            noise_level = torch.FloatTensor(self.sqrt_alphas_cumprod_prev[s])
+
+        return noise_level.to(device).unsqueeze(-1)
     
-    def q_sample(self, y_0, continuous_sqrt_alpha_cumprod=None, eps=None):
+    def q_sample(self, y_0, noise_level=None, eps=None):
         batch_size = y_0.shape[0]
-        continuous_sqrt_alpha_cumprod \
-            = self.sample_continuous_noise_level(batch_size, device=y_0.device) \
-                if isinstance(eps, type(None)) else continuous_sqrt_alpha_cumprod
+        noise_level \
+            = self.sample_noise_level(batch_size, device=y_0.device) \
+                if isinstance(eps, type(None)) else noise_level
         if isinstance(eps, type(None)):
             eps = torch.randn_like(y_0)
-        outputs = continuous_sqrt_alpha_cumprod * y_0 + (1 - continuous_sqrt_alpha_cumprod**2).sqrt() * eps
+        outputs = noise_level * y_0 + (1 - noise_level**2).sqrt() * eps
         return outputs
 
     def q_posterior(self, y_start, y, t):
@@ -165,15 +171,15 @@ class WaveGrad(BaseModule):
 
         # Sample continuous noise level
         batch_size = y_0.shape[0]
-        continuous_sqrt_alpha_cumprod \
-            = self.sample_continuous_noise_level(batch_size, device=y_0.device)
+        noise_level \
+            = self.sample_noise_level(batch_size, device=y_0.device)
         eps = torch.randn_like(y_0)
 
         # Diffuse the signal
-        y_noisy = self.q_sample(y_0, continuous_sqrt_alpha_cumprod, eps)
+        y_noisy = self.q_sample(y_0, noise_level, eps)
 
         # Reconstruct the added noise
-        eps_recon = self.nn(mels, y_noisy, continuous_sqrt_alpha_cumprod)
+        eps_recon = self.nn(mels, y_noisy, noise_level)
         loss = torch.nn.L1Loss()(eps_recon, eps)
         return loss
 
