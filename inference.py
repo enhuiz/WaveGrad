@@ -70,12 +70,12 @@ if __name__ == "__main__":
     model.load_state_dict(ckpt)
 
     # Set noise schedule
-    noise_schedule = torch.load(args.noise_schedule_path)
-    noise_schedule = torch.tensor(noise_schedule)
-    n_iter = noise_schedule.shape[-1]
-    init_fn = lambda **kwargs: noise_schedule
-    init_kwargs = {"steps": n_iter}
-    model.set_new_noise_schedule(init_fn, init_kwargs)
+    # noise_schedule = torch.load(args.noise_schedule_path)
+    # noise_schedule = torch.tensor(noise_schedule)
+    # n_iter = noise_schedule.shape[-1]
+    # init_fn = lambda **kwargs: noise_schedule
+    # init_kwargs = {"steps": n_iter}
+    # model.set_new_noise_schedule(init_fn, init_kwargs)
 
     # Trying to run inference on GPU
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             end = datetime.now()
 
             outputs = outputs.cpu().squeeze()
-            save_path = Path(mel_path).with_suffix(".wav")
+            save_path = str(Path(mel_path).with_suffix(".wav"))
             torchaudio.save(
                 save_path, outputs, sample_rate=config.data_config.sample_rate
             )
